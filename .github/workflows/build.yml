@@ -1,0 +1,81 @@
+name: Build ImGuiRedux
+on: push
+jobs:
+  ImGuiRedux:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        platform: [Win32, Win64]
+        buildtype: [Release]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Setup premake
+        uses: abel0b/setup-premake@v2.4
+        with:
+          version: "5.0.0-beta7"
+      - name: Configure build
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{matrix.platform}} 
+      - name: Build plugin
+        run: |
+          cd tools
+          premake5 vs2022
+          cd ../build
+          MsBuild ImGuiRedux.sln /property:Configuration=${{matrix.buildtype}} /p:Platform=${{matrix.platform}} /t:ImGuiRedux
+      - name: Upload plugin
+        uses: actions/upload-artifact@v4
+        with:
+          name: ImGuiRedux${{matrix.platform}}
+          path: build\bin\ImGuiRedux${{matrix.platform}}.cleo
+      - name: Archive plugin
+        uses: papeloto/action-zip@v1.2
+        with:
+          files: build\bin\ImGuiRedux${{matrix.platform}}.cleo
+          dest: ImGuiRedux${{matrix.platform}}.zip
+      - name: Add build to release tag
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: ImGuiRedux${{matrix.platform}}.zip
+          name: "${{matrix.platform}} Builds"
+          body: "This release is updated frequently with newer builds.\n\n- ImGuiReduxWin64 -> For CLEORedux (Supports 64 bit games)"
+          allowUpdates: true
+          tag: "${{matrix.platform}}-latest"
+  ImGuiCleo:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Setup premake
+        uses: abel0b/setup-premake@v2.4
+        with:
+          version: "5.0.0-beta7"
+      - name: Configure build
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: Win32 
+      - name: Build plugin
+        run: |
+          cd tools
+          premake5 vs2022
+          cd ../build
+          MsBuild ImGuiRedux.sln /property:Configuration=ReleaseCleo /p:Platform=Win32 /t:ImGuiRedux
+      - name: Upload plugin
+        uses: actions/upload-artifact@v4
+        with:
+          name: ImGuiCleoWin32
+          path: build\bin\ImGuiCleoWin32.cleo
+      - name: Archive plugin
+        uses: papeloto/action-zip@v1.2
+        with:
+          files: build\bin\ImGuiCleoWin32.cleo
+          dest: ImGuiCleoWin32.zip
+      - name: Add build to release tag
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: ImGuiCleoWin32.zip
+          name: "Win32 Builds"
+          body: "This release is updated frequently with newer builds.\n\n- ImGuiCleoWin32 -> For CLEO5 (Supports GTA SA). Only required if you use ImGui in .cs scripts. \n- ImGuiReduxWin32 -> For CLEORedux (Supports 32 bit games). GTA SA Support is also included."
+          allowUpdates: true
+          tag: "Win32-latest"
